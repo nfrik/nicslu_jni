@@ -1,8 +1,10 @@
-package ncsu;
-import wrapper.SNicsLU;
-import wrapper.doubleArray;
-import wrapper.nicslu;
-import wrapper.uintArray;
+package ncsu;//import wrapper.SNicsLU;
+//import wrapper.doubleArray;
+//import wrapper.nicslu;
+//import wrapper.uintArray;
+import com.nicslu.jni.*;
+import utils.NativeUtils;
+
 import java.nio.file.*;
 import java.lang.Integer;
 import java.io.*;
@@ -14,11 +16,15 @@ public class test {
 
 //        System.load(ad);
 //        File resourcesDirectory = new File("src/main/resources");
-
+        try {
+            NativeUtils.loadLibraryFromJar("/libnicslu.so");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 //        System.load(resourcesDirectory.getAbsolutePath()+"/libdemop.so");
         System.out.println(System.getProperty("java.library.path"));
         System.out.println("LD_LIBRARY_PATH = " + System.getenv("LD_LIBRARY_PATH"));
-        System.loadLibrary("nicslu");
+//        System.loadLibrary("nicslu");
     }
 
     //private static double [ ] Ax = {2., 3., 3., -1., 4., 4., -3., 1., 2., 2., 6., 1.} ;
@@ -54,11 +60,11 @@ public class test {
     }
 
     public static void main(String[] args) {
-        //For test file inputs change n, nnz (look in file) and file name
+        //For ncsu.test file inputs change n, nnz (look in file) and file name
         //int n=99340, nnz=954163;
         //String f="ASIC_100k.mtx";
         if(args.length==0) {
-            String[] newargs = {"src/main/resources/ASIC_100k.mtx", "2"};
+            String[] newargs = {"src/main/resources/ASIC_100k.mtx", "12"};
             args = newargs;
         }
         String f = args[0];
@@ -93,20 +99,20 @@ public class test {
         SNicsLU nics =  new SNicsLU();
         ret= nicslu.NicsLU_Initialize(nics);
 
-        ret=nicslu.NicsLU_CreateMatrix(nics, n, nnz, ax.cast(), ai.cast(), ap.cast());
-        doubleArray cfgf=doubleArray.frompointer(nics.getCfgf());
+        ret= nicslu.NicsLU_CreateMatrix(nics, n, nnz, ax.cast(), ai.cast(), ap.cast());
+        doubleArray cfgf= doubleArray.frompointer(nics.getCfgf());
         cfgf.setitem(0, 1.0);
         nics.setCfgf(cfgf.cast());
 
         nicslu.NicsLU_Analyze(nics);
-        doubleArray stat=doubleArray.frompointer(nics.getStat());
+        doubleArray stat= doubleArray.frompointer(nics.getStat());
         System.out.printf("Analysis time: %.8g\n", stat.getitem(0));
 
-        ret=nicslu.NicsLU_CreateScheduler(nics);
+        ret= nicslu.NicsLU_CreateScheduler(nics);
         System.out.printf("Time of creating scheduler: %.8g\n", stat.getitem(4));
         System.out.printf("Suggestion: %s.\n", ret==0?"parallel":"sequential");
 
-        uintArray cfgi=uintArray.frompointer(nics.getCfgi());
+        uintArray cfgi= uintArray.frompointer(nics.getCfgi());
 
         nicslu.NicsLU_CreateThreads(nics, Integer.parseInt(args[1]), true);
         System.out.printf("Total cores: %d, threads created: %d\n", (int)stat.getitem(9), (int)cfgi.getitem(5));
@@ -122,7 +128,7 @@ public class test {
         nicslu.NicsLU_Solve(nics, x.cast());
         System.out.printf("Substitution time: %.8g\n", stat.getitem(3));
 
-        ret=nicslu.NicsLU_Residual(n, ax.cast(), ai.cast(), ap.cast(), x.cast(), b.cast(), err.cast(), 1, 0);
+        ret= nicslu.NicsLU_Residual(n, ax.cast(), ai.cast(), ap.cast(), x.cast(), b.cast(), err.cast(), 1, 0);
         System.out.printf("Ax-b (1-norm): %.8g\n", err.getitem(0));
 
         nicslu.NicsLU_Residual(n, ax.cast(), ai.cast(), ap.cast(), x.cast(), b.cast(), err.cast(), 2, 0);
